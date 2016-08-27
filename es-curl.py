@@ -8,7 +8,8 @@ Script helps in:
 - Dont have to write the curl arg identifiers
 - Does json checking for the inputted body
 '''
-import sys, os, json
+import sys, os, json, urllib2
+import requests
 
 ES_SERVER = 'http://localhost:9200'
 
@@ -53,14 +54,20 @@ def getParsedBodyJson(body):
 
 	return bodyJson
 
-def getCurlBodyPortion(body):
-	parsedBodyJson = getParsedBodyJson(body)
+def getCurlBodyPortion(prettyBodyJsonStr):
 	curlBodyPortion = ''
-	if parsedBodyJson != None:
-		prettyBodyJson = json.dumps(parsedBodyJson, indent=4, separators=(',', ': '))
-		curlBodyPortion = " -d'" + prettyBodyJson +  "'"
+	if len(prettyBodyJsonStr.strip()) > 0:
+		curlBodyPortion = " -d'" + prettyBodyJsonStr +  "'"
 
 	return curlBodyPortion
+
+def getParsedJsonPrettyStr(body):
+	prettyBodyJson = ''
+	parsedBodyJson = getParsedBodyJson(body)
+	if parsedBodyJson != None:
+		prettyBodyJson = json.dumps(parsedBodyJson, indent=4, separators=(',', ': '))
+
+	return prettyBodyJson
 
 if __name__ == '__main__':
 	checkCommandArgs()
@@ -69,12 +76,16 @@ if __name__ == '__main__':
 	urlPath = sys.argv[2]
 
 	body = getBodyInputFromUser()
-	curlBodyPortion = getCurlBodyPortion(body)
+	prettyBodyJsonStr = getParsedJsonPrettyStr(body)
+	curlBodyPortion = getCurlBodyPortion(prettyBodyJsonStr)
 
 	prettyAppend = getPrettyAppend(urlPath)
 	urlPath = urlPath + prettyAppend
 
 	curlCommand = 'curl -X' + httpMethod + ' ' + ES_SERVER + urlPath 
 	print 'Executing:\n' + curlCommand + curlBodyPortion
+	response = requests.request(httpMethod, ES_SERVER + urlPath, data=prettyBodyJsonStr)
+
+
 	print '\nResponse:'
-	os.system(curlCommand)
+	print(response.text)
